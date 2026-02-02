@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
-import { ArrowRight, Circle, GitBranch, Code2, Download, Network } from 'lucide-react';
-import { CallGraph } from './CallGraph';
+import React, { useState } from "react";
+import {
+  ArrowRight,
+  Circle,
+  GitBranch,
+  Code2,
+  Download,
+  Network,
+} from "lucide-react";
+import { CallGraph } from "./CallGraph";
 
 interface FunctionData {
   name: string;
   lineNumber: number;
   params: string[];
-  type: 'function' | 'class' | 'method' | 'arrow';
+  type: "function" | "class" | "method" | "arrow";
 }
 
 interface CallData {
@@ -16,37 +23,51 @@ interface CallData {
   context?: string;
 }
 
+interface CallSiteNode {
+  id: string;
+  callerName: string;
+  calleeName: string;
+  lineNumber: number;
+  context?: string;
+}
+
 interface FunctionVisualizerProps {
   functions: FunctionData[];
   calls: CallData[];
   language: string;
+  callSites?: CallSiteNode[];
 }
 
 const functionColors = [
-  '#3b82f6', // blue
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#8b5cf6', // violet
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#f97316', // orange
+  "#3b82f6", // blue
+  "#10b981", // green
+  "#f59e0b", // amber
+  "#ef4444", // red
+  "#8b5cf6", // violet
+  "#ec4899", // pink
+  "#06b6d4", // cyan
+  "#f97316", // orange
 ];
 
-export function FunctionVisualizer({ functions, calls, language }: FunctionVisualizerProps) {
+export function FunctionVisualizer({
+  functions,
+  calls,
+  language,
+  callSites = [],
+}: FunctionVisualizerProps) {
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'graph'>('list');
+  const [viewMode, setViewMode] = useState<"list" | "graph">("list");
 
   const getColorForFunction = (index: number) => {
     return functionColors[index % functionColors.length];
   };
 
   const getFunctionCalls = (functionName: string) => {
-    return calls.filter(call => call.from === functionName);
+    return calls.filter((call) => call.from === functionName);
   };
 
   const getCalledBy = (functionName: string) => {
-    return calls.filter(call => call.to === functionName);
+    return calls.filter((call) => call.to === functionName);
   };
 
   const handleExport = () => {
@@ -56,9 +77,11 @@ export function FunctionVisualizer({ functions, calls, language }: FunctionVisua
       calls,
       timestamp: new Date().toISOString(),
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `code-analysis-${Date.now()}.json`;
     a.click();
@@ -75,21 +98,21 @@ export function FunctionVisualizer({ functions, calls, language }: FunctionVisua
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-[#0d1117] rounded p-1">
             <button
-              onClick={() => setViewMode('list')}
+              onClick={() => setViewMode("list")}
               className={`px-3 py-1 text-xs rounded transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-gray-300'
+                viewMode === "list"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-400 hover:text-gray-300"
               }`}
             >
               List
             </button>
             <button
-              onClick={() => setViewMode('graph')}
+              onClick={() => setViewMode("graph")}
               className={`px-3 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
-                viewMode === 'graph'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-gray-300'
+                viewMode === "graph"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-400 hover:text-gray-300"
               }`}
             >
               <Network className="w-3 h-3" />
@@ -105,7 +128,7 @@ export function FunctionVisualizer({ functions, calls, language }: FunctionVisua
             Export
           </button>
           <div className="text-sm text-gray-400">
-            {functions.length} function{functions.length !== 1 ? 's' : ''}
+            {functions.length} function{functions.length !== 1 ? "s" : ""}
           </div>
         </div>
       </div>
@@ -117,13 +140,16 @@ export function FunctionVisualizer({ functions, calls, language }: FunctionVisua
             <p className="text-center">
               No functions detected yet.
               <br />
-              <span className="text-sm">Start typing or paste code to analyze.</span>
+              <span className="text-sm">
+                Start typing or paste code to analyze.
+              </span>
             </p>
           </div>
-        ) : viewMode === 'graph' ? (
+        ) : viewMode === "graph" ? (
           <CallGraph
             functions={functions}
             calls={calls}
+            callSites={callSites}
             getColorForFunction={getColorForFunction}
           />
         ) : (
@@ -140,8 +166,8 @@ export function FunctionVisualizer({ functions, calls, language }: FunctionVisua
                     onClick={() => setSelectedFunction(func.name)}
                     className={`border rounded-lg p-4 cursor-pointer transition-all ${
                       selectedFunction === func.name
-                        ? 'border-blue-500 bg-blue-500/10'
-                        : 'border-gray-800 bg-[#161b22] hover:border-gray-700'
+                        ? "border-blue-500 bg-blue-500/10"
+                        : "border-gray-800 bg-[#161b22] hover:border-gray-700"
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -152,7 +178,10 @@ export function FunctionVisualizer({ functions, calls, language }: FunctionVisua
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <code className="font-mono text-sm" style={{ color: getColorForFunction(index) }}>
+                          <code
+                            className="font-mono text-sm"
+                            style={{ color: getColorForFunction(index) }}
+                          >
                             {func.name}
                           </code>
                           <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">
@@ -160,11 +189,12 @@ export function FunctionVisualizer({ functions, calls, language }: FunctionVisua
                           </span>
                         </div>
                         <div className="text-xs text-gray-400 mb-2">
-                          Line {func.lineNumber} • {func.params.length} parameter{func.params.length !== 1 ? 's' : ''}
+                          Line {func.lineNumber} • {func.params.length}{" "}
+                          parameter{func.params.length !== 1 ? "s" : ""}
                         </div>
                         {func.params.length > 0 && (
                           <div className="text-xs text-gray-500 font-mono">
-                            ({func.params.join(', ')})
+                            ({func.params.join(", ")})
                           </div>
                         )}
                       </div>
@@ -175,15 +205,24 @@ export function FunctionVisualizer({ functions, calls, language }: FunctionVisua
                       <div className="mt-4 pt-4 border-t border-gray-700 space-y-3">
                         {getFunctionCalls(func.name).length > 0 && (
                           <div>
-                            <div className="text-xs text-gray-500 mb-2">Calls:</div>
+                            <div className="text-xs text-gray-500 mb-2">
+                              Calls:
+                            </div>
                             <div className="space-y-1.5">
                               {getFunctionCalls(func.name).map((call, i) => (
-                                <div key={i} className="flex items-start gap-2 text-xs">
+                                <div
+                                  key={i}
+                                  className="flex items-start gap-2 text-xs"
+                                >
                                   <ArrowRight className="w-3 h-3 text-green-500 mt-0.5 flex-shrink-0" />
                                   <div className="flex-1">
-                                    <code className="text-green-400">{call.to}</code>
+                                    <code className="text-green-400">
+                                      {call.to}
+                                    </code>
                                     {call.lineNumber && (
-                                      <span className="text-gray-600 ml-2">on line {call.lineNumber}</span>
+                                      <span className="text-gray-600 ml-2">
+                                        on line {call.lineNumber}
+                                      </span>
                                     )}
                                     {call.context && (
                                       <div className="text-gray-500 font-mono mt-1 bg-[#0d1117] p-1.5 rounded text-xs overflow-x-auto">
@@ -198,15 +237,24 @@ export function FunctionVisualizer({ functions, calls, language }: FunctionVisua
                         )}
                         {getCalledBy(func.name).length > 0 && (
                           <div>
-                            <div className="text-xs text-gray-500 mb-2">Called by:</div>
+                            <div className="text-xs text-gray-500 mb-2">
+                              Called by:
+                            </div>
                             <div className="space-y-1.5">
                               {getCalledBy(func.name).map((call, i) => (
-                                <div key={i} className="flex items-start gap-2 text-xs">
+                                <div
+                                  key={i}
+                                  className="flex items-start gap-2 text-xs"
+                                >
                                   <ArrowRight className="w-3 h-3 text-blue-500 rotate-180 mt-0.5 flex-shrink-0" />
                                   <div className="flex-1">
-                                    <code className="text-blue-400">{call.from}</code>
+                                    <code className="text-blue-400">
+                                      {call.from}
+                                    </code>
                                     {call.lineNumber && (
-                                      <span className="text-gray-600 ml-2">on line {call.lineNumber}</span>
+                                      <span className="text-gray-600 ml-2">
+                                        on line {call.lineNumber}
+                                      </span>
                                     )}
                                     {call.context && (
                                       <div className="text-gray-500 font-mono mt-1 bg-[#0d1117] p-1.5 rounded text-xs overflow-x-auto">
@@ -219,11 +267,12 @@ export function FunctionVisualizer({ functions, calls, language }: FunctionVisua
                             </div>
                           </div>
                         )}
-                        {getFunctionCalls(func.name).length === 0 && getCalledBy(func.name).length === 0 && (
-                          <div className="text-xs text-gray-600 italic">
-                            No function calls detected
-                          </div>
-                        )}
+                        {getFunctionCalls(func.name).length === 0 &&
+                          getCalledBy(func.name).length === 0 && (
+                            <div className="text-xs text-gray-600 italic">
+                              No function calls detected
+                            </div>
+                          )}
                       </div>
                     )}
                   </div>
@@ -239,20 +288,40 @@ export function FunctionVisualizer({ functions, calls, language }: FunctionVisua
                 </h3>
                 <div className="border border-gray-800 bg-[#161b22] rounded-lg p-4 space-y-3">
                   {calls.map((call, index) => {
-                    const fromIndex = functions.findIndex(f => f.name === call.from);
-                    const toIndex = functions.findIndex(f => f.name === call.to);
+                    const fromIndex = functions.findIndex(
+                      (f) => f.name === call.from,
+                    );
+                    const toIndex = functions.findIndex(
+                      (f) => f.name === call.to,
+                    );
                     return (
                       <div key={index} className="space-y-1">
                         <div className="flex items-center gap-3 text-sm">
-                          <code style={{ color: fromIndex >= 0 ? getColorForFunction(fromIndex) : '#6b7280' }}>
+                          <code
+                            style={{
+                              color:
+                                fromIndex >= 0
+                                  ? getColorForFunction(fromIndex)
+                                  : "#6b7280",
+                            }}
+                          >
                             {call.from}
                           </code>
                           <ArrowRight className="w-4 h-4 text-gray-600" />
-                          <code style={{ color: toIndex >= 0 ? getColorForFunction(toIndex) : '#6b7280' }}>
+                          <code
+                            style={{
+                              color:
+                                toIndex >= 0
+                                  ? getColorForFunction(toIndex)
+                                  : "#6b7280",
+                            }}
+                          >
                             {call.to}
                           </code>
                           {call.lineNumber && (
-                            <span className="text-xs text-gray-600">Line {call.lineNumber}</span>
+                            <span className="text-xs text-gray-600">
+                              Line {call.lineNumber}
+                            </span>
                           )}
                         </div>
                         {call.context && (

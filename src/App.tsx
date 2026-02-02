@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
-import { Resizable } from 're-resizable';
-import { CodeEditor } from './components/CodeEditor';
-import { FunctionVisualizer } from './components/FunctionVisualizer';
-import { parseCode } from './utils/codeParser';
+import React, { useState } from "react";
+import { Resizable } from "re-resizable";
+import { CodeEditor } from "./components/CodeEditor";
+import { FunctionVisualizer } from "./components/FunctionVisualizer";
+import { parseCode } from "./utils/codeParser";
 
 export default function App() {
-  const [code, setCode] = useState('');
-  const [language, setLanguage] = useState<'javascript' | 'python' | 'java' | 'typescript'>('javascript');
+  const [code, setCode] = useState("");
+  const [language, setLanguage] = useState<
+    "javascript" | "python" | "java" | "typescript"
+  >("python");
 
   const parsedData = parseCode(code, language);
 
@@ -22,8 +24,8 @@ export default function App() {
       <div className="flex h-[calc(100vh-80px)]">
         <Resizable
           defaultSize={{
-            width: '50%',
-            height: '100%',
+            width: "50%",
+            height: "100%",
           }}
           minWidth="30%"
           maxWidth="70%"
@@ -39,15 +41,15 @@ export default function App() {
           }}
           handleStyles={{
             right: {
-              width: '4px',
-              right: '-2px',
-              cursor: 'col-resize',
-              backgroundColor: 'transparent',
-              transition: 'background-color 0.2s',
+              width: "4px",
+              right: "-2px",
+              cursor: "col-resize",
+              backgroundColor: "transparent",
+              transition: "background-color 0.2s",
             },
           }}
           handleClasses={{
-            right: 'hover:bg-blue-500',
+            right: "hover:bg-blue-500",
           }}
         >
           <CodeEditor
@@ -60,6 +62,7 @@ export default function App() {
         <FunctionVisualizer
           functions={parsedData.functions}
           calls={parsedData.calls}
+          callSites={parsedData.callSites}
           language={language}
         />
       </div>

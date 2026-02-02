@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect } from "react";
 import ReactFlow, {
   Node,
   Edge,
@@ -9,14 +9,14 @@ import ReactFlow, {
   useEdgesState,
   MarkerType,
   Position,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
+} from "reactflow";
+import "reactflow/dist/style.css";
 
 interface FunctionData {
   name: string;
   lineNumber: number;
   params: string[];
-  type: 'function' | 'class' | 'method' | 'arrow';
+  type: "function" | "class" | "method" | "arrow";
 }
 
 interface CallData {
@@ -24,84 +24,205 @@ interface CallData {
   to: string;
 }
 
+interface CallSiteNode {
+  id: string;
+  callerName: string;
+  calleeName: string;
+  lineNumber: number;
+  context?: string;
+}
+
 interface CallGraphProps {
   functions: FunctionData[];
   calls: CallData[];
+  callSites: CallSiteNode[];
   getColorForFunction: (index: number) => string;
 }
 
-export function CallGraph({ functions, calls, getColorForFunction }: CallGraphProps) {
+export function CallGraph({
+  functions,
+  calls,
+  callSites,
+  getColorForFunction,
+}: CallGraphProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   useEffect(() => {
-    // Create nodes from functions
-    const newNodes: Node[] = functions.map((func, index) => {
+    // Use hierarchical layout: definitions at top, call sites below
+    const functionNodes: Node[] = functions.map((func, index) => {
       const color = getColorForFunction(index);
-      
-      // Calculate position in a circular or grid layout
-      const angle = (index / functions.length) * 2 * Math.PI;
-      const radius = Math.max(200, functions.length * 30);
-      const x = 400 + radius * Math.cos(angle);
-      const y = 300 + radius * Math.sin(angle);
+
+      // Horizontal spacing for function definitions
+      const spacing = 250;
+      const x = index * spacing + 100;
+      const y = 100; // Top layer
 
       return {
         id: func.name,
-        type: 'default',
+        type: "default",
         position: { x, y },
         data: {
           label: (
-            <div className="px-3 py-2">
-              <div className="font-mono font-semibold mb-1">{func.name}</div>
+            <div className="px-4 py-3">
+              <div className="flex items-center gap-2 mb-1">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: color }}
+                />
+                <div className="font-mono font-bold text-sm">{func.name}</div>
+              </div>
               <div className="text-xs text-gray-400">
                 {func.type} • Line {func.lineNumber}
               </div>
               {func.params.length > 0 && (
-                <div className="text-xs text-gray-500 mt-1">
-                  ({func.params.slice(0, 2).join(', ')}
-                  {func.params.length > 2 ? '...' : ''})
+                <div className="text-xs text-gray-500 mt-1 font-mono">
+                  ({func.params.slice(0, 3).join(", ")}
+                  {func.params.length > 3 ? "..." : ""})
                 </div>
               )}
             </div>
           ),
         },
         style: {
-          background: '#161b22',
+          background: "linear-gradient(135deg, #161b22 0%, #1c2128 100%)",
           border: `2px solid ${color}`,
-          borderRadius: '8px',
-          color: '#e6edf3',
-          fontSize: '12px',
-          minWidth: '140px',
+          borderRadius: "12px",
+          color: "#e6edf3",
+          fontSize: "12px",
+          minWidth: "160px",
+          boxShadow: `0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 1px ${color}20`,
         },
-        sourcePosition: Position.Right,
-        targetPosition: Position.Left,
+        sourcePosition: Position.Bottom,
+        targetPosition: Position.Top,
       };
     });
 
-    // Create edges from calls
-    const newEdges: Edge[] = calls.map((call, index) => {
-      const fromIndex = functions.findIndex(f => f.name === call.from);
-      const color = fromIndex >= 0 ? getColorForFunction(fromIndex) : '#6b7280';
+    // Create call site nodes with better organization
+    // Group call sites by caller
+    const callSitesByCallee = new Map<string, CallSiteNode[]>();
+    callSites.forEach((cs) => {
+      if (!callSitesByCallee.has(cs.calleeName)) {
+        callSitesByCallee.set(cs.calleeName, []);
+      }
+      callSitesByCallee.get(cs.calleeName)!.push(cs);
+    });
 
-      return {
-        id: `${call.from}-${call.to}-${index}`,
-        source: call.from,
-        target: call.to,
+    const callSiteNodes: Node[] = [];
+    let globalCallSiteIndex = 0;
+
+    functions.forEach((func, funcIndex) => {
+      const sitesForThisFunction = callSitesByCallee.get(func.name) || [];
+
+      sitesForThisFunction.forEach((callSite, siteIndex) => {
+        // Use the CALLEE's color (the function being called), not the caller's
+        const calleeIndex = functions.findIndex(
+          (f) => f.name === callSite.calleeName,
+        );
+        const color =
+          calleeIndex >= 0 ? getColorForFunction(calleeIndex) : "#6b7280";
+
+        // Position call sites below their target function
+        const funcX = funcIndex * 250 + 100;
+        const offsetX = (siteIndex - sitesForThisFunction.length / 2) * 100;
+        const x = funcX + offsetX;
+        const y = 300; // Middle layer
+
+        callSiteNodes.push({
+          id: callSite.id,
+          type: "default",
+          position: { x, y },
+          data: {
+            label: (
+              <div className="px-3 py-2 text-center">
+                <div className="text-xs font-semibold text-gray-300">Call</div>
+                <div className="text-xs text-gray-400 font-mono mt-0.5">
+                  L{callSite.lineNumber}
+                </div>
+              </div>
+            ),
+          },
+          style: {
+            background: "linear-gradient(135deg, #0d1117 0%, #161b22 100%)",
+            border: `1.5px solid ${color}`,
+            borderRadius: "8px",
+            color: "#e6edf3",
+            fontSize: "10px",
+            minWidth: "65px",
+            maxWidth: "65px",
+            opacity: 0.95,
+            boxShadow: `0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 1px ${color}15`,
+          },
+          sourcePosition: Position.Bottom,
+          targetPosition: Position.Top,
+        });
+
+        globalCallSiteIndex++;
+      });
+    });
+
+    const allNodes = [...functionNodes, ...callSiteNodes];
+
+    // Create cleaner edges with better styling
+    const callEdges: Edge[] = callSites.flatMap((callSite) => {
+      const calleeIndex = functions.findIndex(
+        (f) => f.name === callSite.calleeName,
+      );
+      // Use the CALLEE's color for consistency
+      const color =
+        calleeIndex >= 0 ? getColorForFunction(calleeIndex) : "#6b7280";
+
+      const edges: Edge[] = [];
+
+      // Edge from caller definition to call site
+      if (callSite.callerName !== "global") {
+        edges.push({
+          id: `${callSite.callerName}-${callSite.id}`,
+          source: callSite.callerName,
+          target: callSite.id,
+          animated: false,
+          style: {
+            stroke: color,
+            strokeWidth: 1.5,
+            opacity: 0.4,
+            strokeDasharray: "5,5",
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: color,
+            width: 12,
+            height: 12,
+          },
+          type: "smoothstep",
+        });
+      }
+
+      // Edge from call site to callee definition (main edge)
+      edges.push({
+        id: `${callSite.id}-${callSite.calleeName}`,
+        source: callSite.id,
+        target: callSite.calleeName,
         animated: true,
-        style: { stroke: color, strokeWidth: 2 },
+        style: {
+          stroke: color,
+          strokeWidth: 2.5,
+          opacity: 0.8,
+        },
         markerEnd: {
           type: MarkerType.ArrowClosed,
           color: color,
-          width: 20,
-          height: 20,
+          width: 18,
+          height: 18,
         },
-        type: 'smoothstep',
-      };
+        type: "smoothstep",
+      });
+
+      return edges;
     });
 
-    setNodes(newNodes);
-    setEdges(newEdges);
-  }, [functions, calls, getColorForFunction, setNodes, setEdges]);
+    setNodes(allNodes);
+    setEdges(callEdges);
+  }, [functions, calls, callSites, getColorForFunction, setNodes, setEdges]);
 
   return (
     <div className="w-full h-full bg-[#0d1117]">
@@ -111,18 +232,43 @@ export function CallGraph({ functions, calls, getColorForFunction }: CallGraphPr
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         fitView
+        fitViewOptions={{
+          padding: 0.2,
+          minZoom: 0.5,
+          maxZoom: 1.5,
+        }}
         attributionPosition="bottom-left"
         className="bg-[#0d1117]"
+        minZoom={0.3}
+        maxZoom={2}
       >
-        <Background color="#21262d" gap={16} />
-        <Controls className="bg-[#161b22] border border-gray-800 rounded" />
+        <Background color="#21262d" gap={20} size={1} />
+        <Controls
+          className="bg-[#161b22] border border-gray-700 rounded-lg shadow-lg"
+          showInteractive={false}
+        />
         <MiniMap
-          className="bg-[#161b22] border border-gray-800 rounded"
-          nodeColor={(node) => {
-            const index = functions.findIndex(f => f.name === node.id);
-            return index >= 0 ? getColorForFunction(index) : '#6b7280';
+          className="bg-[#0d1117] border border-gray-700 rounded-lg shadow-lg"
+          nodeColor={(node: any) => {
+            // Check if it's a call site node
+            if (node.id.startsWith("call_")) {
+              const callSite = callSites.find((cs) => cs.id === node.id);
+              if (callSite) {
+                // Use the CALLEE's color (function being called)
+                const calleeIndex = functions.findIndex(
+                  (f) => f.name === callSite.calleeName,
+                );
+                return calleeIndex >= 0
+                  ? getColorForFunction(calleeIndex)
+                  : "#6b7280";
+              }
+            }
+            // It's a function definition node
+            const index = functions.findIndex((f) => f.name === node.id);
+            return index >= 0 ? getColorForFunction(index) : "#6b7280";
           }}
-          maskColor="rgba(13, 17, 23, 0.8)"
+          maskColor="rgba(13, 17, 23, 0.9)"
+          nodeStrokeWidth={3}
         />
       </ReactFlow>
     </div>
