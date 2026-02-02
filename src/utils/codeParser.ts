@@ -53,11 +53,18 @@ function parseJavaScript(code: string, lines: string[]): ParsedCode {
   const calls: CallData[] = [];
   const callSites: CallSiteNode[] = [];
 
+  // Remove comments to avoid false positives
+  const codeWithoutComments = code
+    .replace(/\/\*[\s\S]*?\*\//g, "") // Multi-line comments
+    .replace(/\/\/.*/g, ""); // Single-line comments
+
   // Regular function declarations
   const funcRegex = /function\s+(\w+)\s*\(([^)]*)\)/g;
   let match;
-  while ((match = funcRegex.exec(code)) !== null) {
-    const lineNumber = code.substring(0, match.index).split("\n").length;
+  while ((match = funcRegex.exec(codeWithoutComments)) !== null) {
+    const lineNumber = codeWithoutComments
+      .substring(0, match.index)
+      .split("\n").length;
     functions.push({
       name: match[1],
       lineNumber,
@@ -72,8 +79,10 @@ function parseJavaScript(code: string, lines: string[]): ParsedCode {
   // Arrow functions
   const arrowRegex =
     /(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?\(([^)]*)\)\s*=>/g;
-  while ((match = arrowRegex.exec(code)) !== null) {
-    const lineNumber = code.substring(0, match.index).split("\n").length;
+  while ((match = arrowRegex.exec(codeWithoutComments)) !== null) {
+    const lineNumber = codeWithoutComments
+      .substring(0, match.index)
+      .split("\n").length;
     functions.push({
       name: match[1],
       lineNumber,
@@ -87,12 +96,14 @@ function parseJavaScript(code: string, lines: string[]): ParsedCode {
 
   // Class methods
   const methodRegex = /(?:async\s+)?(\w+)\s*\(([^)]*)\)\s*{/g;
-  while ((match = methodRegex.exec(code)) !== null) {
+  while ((match = methodRegex.exec(codeWithoutComments)) !== null) {
     const name = match[1];
     // Skip keywords
     if (["if", "while", "for", "switch", "catch"].includes(name)) continue;
 
-    const lineNumber = code.substring(0, match.index).split("\n").length;
+    const lineNumber = codeWithoutComments
+      .substring(0, match.index)
+      .split("\n").length;
     const alreadyAdded = functions.some(
       (f) => f.name === name && f.lineNumber === lineNumber,
     );
@@ -111,8 +122,10 @@ function parseJavaScript(code: string, lines: string[]): ParsedCode {
 
   // Classes
   const classRegex = /class\s+(\w+)/g;
-  while ((match = classRegex.exec(code)) !== null) {
-    const lineNumber = code.substring(0, match.index).split("\n").length;
+  while ((match = classRegex.exec(codeWithoutComments)) !== null) {
+    const lineNumber = codeWithoutComments
+      .substring(0, match.index)
+      .split("\n").length;
     functions.push({
       name: match[1],
       lineNumber,
@@ -129,6 +142,15 @@ function parseJavaScript(code: string, lines: string[]): ParsedCode {
   lines.forEach((line, index) => {
     const lineNumber = index + 1;
     const trimmedLine = line.trim();
+
+    // Skip comment-only lines
+    if (
+      trimmedLine.startsWith("//") ||
+      trimmedLine.startsWith("/*") ||
+      trimmedLine.startsWith("*")
+    ) {
+      return;
+    }
 
     functionNames.forEach((fnName) => {
       // Match function calls: functionName(...)
@@ -191,11 +213,19 @@ function parsePython(code: string, lines: string[]): ParsedCode {
   const calls: CallData[] = [];
   const callSites: CallSiteNode[] = [];
 
+  // Remove comments to avoid false positives
+  const codeWithoutComments = code
+    .replace(/#.*/g, "") // Single-line comments
+    .replace(/'''[\s\S]*?'''/g, "") // Triple-quoted strings (docstrings)
+    .replace(/"""[\s\S]*?"""/g, ""); // Triple double-quoted strings
+
   // Function definitions
   const funcRegex = /def\s+(\w+)\s*\(([^)]*)\)/g;
   let match;
-  while ((match = funcRegex.exec(code)) !== null) {
-    const lineNumber = code.substring(0, match.index).split("\n").length;
+  while ((match = funcRegex.exec(codeWithoutComments)) !== null) {
+    const lineNumber = codeWithoutComments
+      .substring(0, match.index)
+      .split("\n").length;
     functions.push({
       name: match[1],
       lineNumber,
@@ -209,8 +239,10 @@ function parsePython(code: string, lines: string[]): ParsedCode {
 
   // Class definitions
   const classRegex = /class\s+(\w+)/g;
-  while ((match = classRegex.exec(code)) !== null) {
-    const lineNumber = code.substring(0, match.index).split("\n").length;
+  while ((match = classRegex.exec(codeWithoutComments)) !== null) {
+    const lineNumber = codeWithoutComments
+      .substring(0, match.index)
+      .split("\n").length;
     functions.push({
       name: match[1],
       lineNumber,
@@ -226,6 +258,15 @@ function parsePython(code: string, lines: string[]): ParsedCode {
   lines.forEach((line, index) => {
     const lineNumber = index + 1;
     const trimmedLine = line.trim();
+
+    // Skip comment-only lines
+    if (
+      trimmedLine.startsWith("#") ||
+      trimmedLine.startsWith('"""') ||
+      trimmedLine.startsWith("'''")
+    ) {
+      return;
+    }
 
     functionNames.forEach((fnName) => {
       const callRegex = new RegExp(`\\b${fnName}\\s*\\(`, "g");
@@ -285,19 +326,24 @@ function parseJava(code: string, lines: string[]): ParsedCode {
   const calls: CallData[] = [];
   const callSites: CallSiteNode[] = [];
 
+  // Remove comments to avoid false positives
+  const codeWithoutComments = code
+    .replace(/\/\*[\s\S]*?\*\//g, "") // Multi-line comments
+    .replace(/\/\/.*/g, ""); // Single-line comments
+
   // Method definitions (public, private, protected, static, etc.)
   const methodRegex =
     /(?:public|private|protected|static|\s)+[\w<>[\]]+\s+(\w+)\s*\(([^)]*)\)/g;
   let match;
-  while ((match = methodRegex.exec(code)) !== null) {
+  while ((match = methodRegex.exec(codeWithoutComments)) !== null) {
     const name = match[1];
     // Skip keywords
-    if (
-      ["if", "while", "for", "switch", "catch", "synchronized"].includes(name)
-    )
+    if (["if", "while", "for", "switch", "catch", "return"].includes(name))
       continue;
 
-    const lineNumber = code.substring(0, match.index).split("\n").length;
+    const lineNumber = codeWithoutComments
+      .substring(0, match.index)
+      .split("\n").length;
     functions.push({
       name,
       lineNumber,
@@ -311,8 +357,10 @@ function parseJava(code: string, lines: string[]): ParsedCode {
 
   // Class definitions
   const classRegex = /class\s+(\w+)/g;
-  while ((match = classRegex.exec(code)) !== null) {
-    const lineNumber = code.substring(0, match.index).split("\n").length;
+  while ((match = classRegex.exec(codeWithoutComments)) !== null) {
+    const lineNumber = codeWithoutComments
+      .substring(0, match.index)
+      .split("\n").length;
     functions.push({
       name: match[1],
       lineNumber,
@@ -328,6 +376,15 @@ function parseJava(code: string, lines: string[]): ParsedCode {
   lines.forEach((line, index) => {
     const lineNumber = index + 1;
     const trimmedLine = line.trim();
+
+    // Skip comment-only lines
+    if (
+      trimmedLine.startsWith("//") ||
+      trimmedLine.startsWith("/*") ||
+      trimmedLine.startsWith("*")
+    ) {
+      return;
+    }
 
     functionNames.forEach((fnName) => {
       const callRegex = new RegExp(`\\b${fnName}\\s*\\(`, "g");

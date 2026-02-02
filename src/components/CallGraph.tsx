@@ -60,7 +60,7 @@ export function CallGraph({
 
     const functionNodes: Node[] = [];
     const callSiteNodes: Node[] = [];
-    const horizontalSpacing = 700;
+    const horizontalSpacing = 300;
 
     functions.forEach((func, funcIndex) => {
       const color = getColorForFunction(funcIndex);
@@ -76,45 +76,102 @@ export function CallGraph({
       const callSiteStartY = 300;
       const callSiteVerticalSpacing = 200;
 
-      // Position call sites
-      sitesForThisFunction.forEach((callSite, siteIndex) => {
-        const calleeIndex = functions.findIndex(
-          (f) => f.name === callSite.calleeName,
-        );
-        const siteColor =
-          calleeIndex >= 0 ? getColorForFunction(calleeIndex) : "#6b7280";
+      // Group call sites by line number to handle multiple calls on same line
+      const callsByLine = new Map<number, CallSiteNode[]>();
+      sitesForThisFunction.forEach((callSite) => {
+        if (!callsByLine.has(callSite.lineNumber)) {
+          callsByLine.set(callSite.lineNumber, []);
+        }
+        callsByLine.get(callSite.lineNumber)!.push(callSite);
+      });
 
-        // Spread call sites vertically
-        const y = callSiteStartY + siteIndex * callSiteVerticalSpacing;
+      // Create call site nodes (one per unique line)
+      let nodeIndex = 0;
+      callsByLine.forEach((callsOnLine, lineNumber) => {
+        const y = callSiteStartY + nodeIndex * callSiteVerticalSpacing;
+
+        // Get colors for all functions called on this line
+        const colors = callsOnLine.map((cs) => {
+          const calleeIndex = functions.findIndex(
+            (f) => f.name === cs.calleeName,
+          );
+          return calleeIndex >= 0
+            ? getColorForFunction(calleeIndex)
+            : "#6b7280";
+        });
+
+        // Create border/background style for single or multiple calls
+        let nodeStyle: any;
+
+        if (colors.length === 1) {
+          // Single function call: solid border
+          nodeStyle = {
+            background: "linear-gradient(135deg, #0d1117 0%, #161b22 100%)",
+            border: `1.5px solid ${colors[0]}`,
+            borderRadius: "8px",
+            boxShadow: `0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 1px ${colors[0]}15`,
+          };
+        } else {
+          // Multiple function calls: gradient border using linear-gradient background trick
+          // Create gradient stops for border effect
+          const segmentSize = 100 / colors.length;
+          const gradientStops = colors
+            .flatMap((color, idx) => {
+              const start = idx * segmentSize;
+              const end = (idx + 1) * segmentSize;
+              return [`${color} ${start}%`, `${color} ${end}%`];
+            })
+            .join(", ");
+
+          nodeStyle = {
+            // Use a gradient background for the border effect
+            background: `
+              linear-gradient(135deg, #0d1117 0%, #161b22 100%) padding-box,
+              linear-gradient(90deg, ${gradientStops}) border-box
+            `,
+            border: "2px solid transparent",
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+          };
+        }
+
+        // Use first call site's ID for the node
+        const nodeId = callsOnLine[0].id;
+        const functionNames = callsOnLine
+          .map((cs) => cs.calleeName)
+          .join(" + ");
 
         callSiteNodes.push({
-          id: callSite.id,
+          id: nodeId,
           type: "default",
           position: { x: baseX, y },
           data: {
             label: (
               <div className="px-3 py-2 text-center">
-                <div className="text-xs font-semibold text-gray-300">Call</div>
+                <div className="text-xs font-semibold text-gray-300">
+                  {colors.length > 1 ? `${colors.length} Calls` : "Call"}
+                </div>
                 <div className="text-xs text-gray-400 font-mono mt-0.5">
-                  L{callSite.lineNumber}
+                  L{lineNumber}
                 </div>
               </div>
             ),
+            // Store all call sites for edge creation
+            callSites: callsOnLine,
           },
           style: {
-            background: "linear-gradient(135deg, #0d1117 0%, #161b22 100%)",
-            border: `1.5px solid ${siteColor}`,
-            borderRadius: "8px",
+            ...nodeStyle,
             color: "#e6edf3",
             fontSize: "10px",
-            minWidth: "65px",
-            maxWidth: "65px",
+            minWidth: colors.length > 1 ? "80px" : "65px",
+            maxWidth: colors.length > 1 ? "80px" : "65px",
             opacity: 0.95,
-            boxShadow: `0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 1px ${siteColor}15`,
           },
           sourcePosition: Position.Bottom,
           targetPosition: Position.Top,
         });
+
+        nodeIndex++;
       });
 
       // Create function definition node
@@ -161,60 +218,39 @@ export function CallGraph({
 
     const allNodes = [...functionNodes, ...callSiteNodes];
 
-    // Create edges
-    const callEdges: Edge[] = callSites.flatMap((callSite) => {
-      const calleeIndex = functions.findIndex(
-        (f) => f.name === callSite.calleeName,
-      );
-      const color =
-        calleeIndex >= 0 ? getColorForFunction(calleeIndex) : "#6b7280";
+    // Create edges - handle nodes that may contain multiple call sites
+    const callEdges: Edge[] = [];
 
-      const edges: Edge[] = [];
+    callSiteNodes.forEach((node) => {
+      const callSitesInNode = node.data.callSites as CallSiteNode[];
 
-      // Edge from caller definition to call site (if not global)
-      if (callSite.callerName !== "global") {
-        edges.push({
-          id: `${callSite.callerName}-${callSite.id}`,
-          source: callSite.callerName,
-          target: callSite.id,
-          animated: false,
+      callSitesInNode.forEach((callSite) => {
+        const calleeIndex = functions.findIndex(
+          (f) => f.name === callSite.calleeName,
+        );
+        const color =
+          calleeIndex >= 0 ? getColorForFunction(calleeIndex) : "#6b7280";
+
+        // Create edge from call site node to callee definition
+        callEdges.push({
+          id: `${node.id}-${callSite.calleeName}-${callSite.id}`,
+          source: node.id,
+          target: callSite.calleeName,
+          animated: true,
           style: {
             stroke: color,
-            strokeWidth: 1.5,
-            opacity: 0.4,
-            strokeDasharray: "5,5",
+            strokeWidth: 2.5,
+            opacity: 0.8,
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
             color: color,
-            width: 12,
-            height: 12,
+            width: 18,
+            height: 18,
           },
           type: "smoothstep",
         });
-      }
-
-      // Edge from call site to callee definition (main edge)
-      edges.push({
-        id: `${callSite.id}-${callSite.calleeName}`,
-        source: callSite.id,
-        target: callSite.calleeName,
-        animated: true,
-        style: {
-          stroke: color,
-          strokeWidth: 2.5,
-          opacity: 0.8,
-        },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: color,
-          width: 18,
-          height: 18,
-        },
-        type: "smoothstep",
       });
-
-      return edges;
     });
 
     setNodes(allNodes);
