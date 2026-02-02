@@ -134,6 +134,16 @@ function parseJavaScript(code: string, lines: string[]): ParsedCode {
       // Match function calls: functionName(...)
       const callRegex = new RegExp(`\\b${fnName}\\s*\\(`, "g");
       if (callRegex.test(line)) {
+        // CRITICAL: Skip if this line is a function definition
+        // Check for: function fnName, def fnName, class fnName, const fnName =, etc.
+        const isDefinition =
+          /(?:function|def|class|const|let|var)\s+/.test(trimmedLine) ||
+          /(?:async\s+)?\w+\s*\([^)]*\)\s*(?:=>|{)/.test(trimmedLine);
+
+        if (isDefinition) {
+          // This is a function definition, not a call
+          return;
+        }
         // Try to determine the calling context
         let caller = "global";
 
@@ -220,6 +230,17 @@ function parsePython(code: string, lines: string[]): ParsedCode {
     functionNames.forEach((fnName) => {
       const callRegex = new RegExp(`\\b${fnName}\\s*\\(`, "g");
       if (callRegex.test(line)) {
+        // CRITICAL: Skip if this line is a function definition
+        // Check for: def fnName( or class fnName
+        if (
+          trimmedLine.startsWith("def ") ||
+          trimmedLine.startsWith("class ") ||
+          trimmedLine.startsWith("@")
+        ) {
+          // This is a function/class definition or decorator, not a call
+          return;
+        }
+
         let caller = "global";
 
         for (let i = functions.length - 1; i >= 0; i--) {
@@ -311,6 +332,19 @@ function parseJava(code: string, lines: string[]): ParsedCode {
     functionNames.forEach((fnName) => {
       const callRegex = new RegExp(`\\b${fnName}\\s*\\(`, "g");
       if (callRegex.test(line)) {
+        // CRITICAL: Skip if this line is a method/class definition
+        // Check for Java method signatures: public/private/protected void methodName(
+        if (
+          /(?:public|private|protected|static|final|abstract|synchronized)\s/.test(
+            trimmedLine,
+          ) ||
+          trimmedLine.startsWith("class ") ||
+          trimmedLine.startsWith("@")
+        ) {
+          // This is a method/class definition or annotation, not a call
+          return;
+        }
+
         let caller = "global";
 
         for (let i = functions.length - 1; i >= 0; i--) {

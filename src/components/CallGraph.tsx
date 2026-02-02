@@ -49,19 +49,79 @@ export function CallGraph({
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   useEffect(() => {
-    // Use hierarchical layout: definitions at top, call sites below
-    const functionNodes: Node[] = functions.map((func, index) => {
-      const color = getColorForFunction(index);
+    // Group call sites by their callee (function being called)
+    const callSitesByCallee = new Map<string, CallSiteNode[]>();
+    callSites.forEach((cs) => {
+      if (!callSitesByCallee.has(cs.calleeName)) {
+        callSitesByCallee.set(cs.calleeName, []);
+      }
+      callSitesByCallee.get(cs.calleeName)!.push(cs);
+    });
 
-      // Horizontal spacing for function definitions - increased for better readability
-      const spacing = 400;
-      const x = index * spacing + 150;
-      const y = 100; // Top layer
+    const functionNodes: Node[] = [];
+    const callSiteNodes: Node[] = [];
+    const horizontalSpacing = 700;
 
-      return {
+    functions.forEach((func, funcIndex) => {
+      const color = getColorForFunction(funcIndex);
+      const sitesForThisFunction = callSitesByCallee.get(func.name) || [];
+
+      // Calculate horizontal position
+      const baseX = funcIndex * horizontalSpacing + 150;
+
+      // Function always at the top
+      const functionY = 100;
+
+      // Call sites positioned below the function, spread vertically
+      const callSiteStartY = 300;
+      const callSiteVerticalSpacing = 200;
+
+      // Position call sites
+      sitesForThisFunction.forEach((callSite, siteIndex) => {
+        const calleeIndex = functions.findIndex(
+          (f) => f.name === callSite.calleeName,
+        );
+        const siteColor =
+          calleeIndex >= 0 ? getColorForFunction(calleeIndex) : "#6b7280";
+
+        // Spread call sites vertically
+        const y = callSiteStartY + siteIndex * callSiteVerticalSpacing;
+
+        callSiteNodes.push({
+          id: callSite.id,
+          type: "default",
+          position: { x: baseX, y },
+          data: {
+            label: (
+              <div className="px-3 py-2 text-center">
+                <div className="text-xs font-semibold text-gray-300">Call</div>
+                <div className="text-xs text-gray-400 font-mono mt-0.5">
+                  L{callSite.lineNumber}
+                </div>
+              </div>
+            ),
+          },
+          style: {
+            background: "linear-gradient(135deg, #0d1117 0%, #161b22 100%)",
+            border: `1.5px solid ${siteColor}`,
+            borderRadius: "8px",
+            color: "#e6edf3",
+            fontSize: "10px",
+            minWidth: "65px",
+            maxWidth: "65px",
+            opacity: 0.95,
+            boxShadow: `0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 1px ${siteColor}15`,
+          },
+          sourcePosition: Position.Bottom,
+          targetPosition: Position.Top,
+        });
+      });
+
+      // Create function definition node
+      functionNodes.push({
         id: func.name,
         type: "default",
-        position: { x, y },
+        position: { x: baseX, y: functionY },
         data: {
           label: (
             <div className="px-4 py-3">
@@ -92,89 +152,26 @@ export function CallGraph({
           fontSize: "12px",
           minWidth: "160px",
           boxShadow: `0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 1px ${color}20`,
+          zIndex: 10, // Ensure function nodes are above call sites
         },
         sourcePosition: Position.Bottom,
         targetPosition: Position.Top,
-      };
-    });
-
-    // Create call site nodes with better organization
-    // Group call sites by caller
-    const callSitesByCallee = new Map<string, CallSiteNode[]>();
-    callSites.forEach((cs) => {
-      if (!callSitesByCallee.has(cs.calleeName)) {
-        callSitesByCallee.set(cs.calleeName, []);
-      }
-      callSitesByCallee.get(cs.calleeName)!.push(cs);
-    });
-
-    const callSiteNodes: Node[] = [];
-    let globalCallSiteIndex = 0;
-
-    functions.forEach((func, funcIndex) => {
-      const sitesForThisFunction = callSitesByCallee.get(func.name) || [];
-
-      sitesForThisFunction.forEach((callSite, siteIndex) => {
-        // Use the CALLEE's color (the function being called), not the caller's
-        const calleeIndex = functions.findIndex(
-          (f) => f.name === callSite.calleeName,
-        );
-        const color =
-          calleeIndex >= 0 ? getColorForFunction(calleeIndex) : "#6b7280";
-
-        // Position call sites below their target function
-        const funcX = funcIndex * 400 + 150;
-        const offsetX = (siteIndex - sitesForThisFunction.length / 2) * 120;
-        const x = funcX + offsetX;
-        const y = 300; // Middle layer
-
-        callSiteNodes.push({
-          id: callSite.id,
-          type: "default",
-          position: { x, y },
-          data: {
-            label: (
-              <div className="px-3 py-2 text-center">
-                <div className="text-xs font-semibold text-gray-300">Call</div>
-                <div className="text-xs text-gray-400 font-mono mt-0.5">
-                  L{callSite.lineNumber}
-                </div>
-              </div>
-            ),
-          },
-          style: {
-            background: "linear-gradient(135deg, #0d1117 0%, #161b22 100%)",
-            border: `1.5px solid ${color}`,
-            borderRadius: "8px",
-            color: "#e6edf3",
-            fontSize: "10px",
-            minWidth: "65px",
-            maxWidth: "65px",
-            opacity: 0.95,
-            boxShadow: `0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 1px ${color}15`,
-          },
-          sourcePosition: Position.Bottom,
-          targetPosition: Position.Top,
-        });
-
-        globalCallSiteIndex++;
       });
     });
 
     const allNodes = [...functionNodes, ...callSiteNodes];
 
-    // Create cleaner edges with better styling
+    // Create edges
     const callEdges: Edge[] = callSites.flatMap((callSite) => {
       const calleeIndex = functions.findIndex(
         (f) => f.name === callSite.calleeName,
       );
-      // Use the CALLEE's color for consistency
       const color =
         calleeIndex >= 0 ? getColorForFunction(calleeIndex) : "#6b7280";
 
       const edges: Edge[] = [];
 
-      // Edge from caller definition to call site
+      // Edge from caller definition to call site (if not global)
       if (callSite.callerName !== "global") {
         edges.push({
           id: `${callSite.callerName}-${callSite.id}`,

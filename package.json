@@ -1,5 +1,5 @@
 {
-  "name": "Code Visualization App",
+  "name": "function-visualizer",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
