@@ -23,7 +23,7 @@ A powerful React-based application for visualizing code structure and function c
 
 ### Installation
 ```base
-git clone [https://github.com/Yash19815/function-visualizer](https://github.com/Yash19815/function-visualizer.git)
+git clone https://github.com/Yash19815/function-visualizer
 cd function-visualizer
 npm install
 ```
