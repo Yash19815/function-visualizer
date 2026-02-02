@@ -1,33 +1,99 @@
-import React, { useRef, useEffect } from 'react';
-import { Upload, Copy, FileCode } from 'lucide-react';
-import Editor from '@monaco-editor/react';
+import React, { useRef, useEffect } from "react";
+import { Upload, Copy, FileCode } from "lucide-react";
+import Editor from "@monaco-editor/react";
 
 interface CodeEditorProps {
   code: string;
   onChange: (code: string) => void;
-  language: 'javascript' | 'python' | 'java' | 'typescript';
-  onLanguageChange: (language: 'javascript' | 'python' | 'java' | 'typescript') => void;
+  language:
+    | "javascript"
+    | "python"
+    | "java"
+    | "typescript"
+    | "c"
+    | "cpp"
+    | "r"
+    | "go"
+    | "rust"
+    | "php"
+    | "ruby"
+    | "swift";
+  onLanguageChange: (
+    language:
+      | "javascript"
+      | "python"
+      | "java"
+      | "typescript"
+      | "c"
+      | "cpp"
+      | "r"
+      | "go"
+      | "rust"
+      | "php"
+      | "ruby"
+      | "swift",
+  ) => void;
 }
 
-const detectLanguageFromFile = (filename: string): 'javascript' | 'python' | 'java' | 'typescript' => {
-  const ext = filename.split('.').pop()?.toLowerCase();
+const detectLanguageFromFile = (
+  filename: string,
+):
+  | "javascript"
+  | "python"
+  | "java"
+  | "typescript"
+  | "c"
+  | "cpp"
+  | "r"
+  | "go"
+  | "rust"
+  | "php"
+  | "ruby"
+  | "swift" => {
+  const ext = filename.split(".").pop()?.toLowerCase();
   switch (ext) {
-    case 'js':
-    case 'jsx':
-      return 'javascript';
-    case 'ts':
-    case 'tsx':
-      return 'typescript';
-    case 'py':
-      return 'python';
-    case 'java':
-      return 'java';
+    case "js":
+    case "jsx":
+      return "javascript";
+    case "ts":
+    case "tsx":
+      return "typescript";
+    case "py":
+      return "python";
+    case "java":
+      return "java";
+    case "c":
+    case "h":
+      return "c";
+    case "cpp":
+    case "cc":
+    case "cxx":
+    case "hpp":
+    case "hxx":
+      return "cpp";
+    case "r":
+      return "r";
+    case "go":
+      return "go";
+    case "rs":
+      return "rust";
+    case "php":
+      return "php";
+    case "rb":
+      return "ruby";
+    case "swift":
+      return "swift";
     default:
-      return 'javascript';
+      return "javascript";
   }
 };
 
-export function CodeEditor({ code, onChange, language, onLanguageChange }: CodeEditorProps) {
+export function CodeEditor({
+  code,
+  onChange,
+  language,
+  onLanguageChange,
+}: CodeEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +117,7 @@ export function CodeEditor({ code, onChange, language, onLanguageChange }: CodeE
       const text = await navigator.clipboard.readText();
       onChange(text);
     } catch (err) {
-      console.error('Failed to read clipboard:', err);
+      console.error("Failed to read clipboard:", err);
     }
   };
 
@@ -69,6 +135,14 @@ export function CodeEditor({ code, onChange, language, onLanguageChange }: CodeE
             <option value="typescript">TypeScript</option>
             <option value="python">Python</option>
             <option value="java">Java</option>
+            <option value="c">C</option>
+            <option value="cpp">C++</option>
+            <option value="r">R</option>
+            <option value="go">Go</option>
+            <option value="rust">Rust</option>
+            <option value="php">PHP</option>
+            <option value="ruby">Ruby</option>
+            <option value="swift">Swift</option>
           </select>
         </div>
 
@@ -90,7 +164,7 @@ export function CodeEditor({ code, onChange, language, onLanguageChange }: CodeE
           <input
             ref={fileInputRef}
             type="file"
-            accept=".js,.jsx,.ts,.tsx,.py,.java"
+            accept=".js,.jsx,.ts,.tsx,.py,.java,.c,.h,.cpp,.cc,.cxx,.hpp,.hxx,.r,.go,.rs,.php,.rb,.swift"
             onChange={handleFileUpload}
             className="hidden"
           />
@@ -102,19 +176,19 @@ export function CodeEditor({ code, onChange, language, onLanguageChange }: CodeE
           height="100%"
           language={language}
           value={code}
-          onChange={(value) => onChange(value || '')}
+          onChange={(value) => onChange(value || "")}
           theme="vs-dark"
           options={{
             minimap: { enabled: false },
             fontSize: 14,
-            lineNumbers: 'on',
+            lineNumbers: "on",
             scrollBeyondLastLine: false,
-            wordWrap: 'on',
-            wrappingIndent: 'indent',
+            wordWrap: "on",
+            wrappingIndent: "indent",
             automaticLayout: true,
             tabSize: 2,
             insertSpaces: true,
-            renderWhitespace: 'selection',
+            renderWhitespace: "selection",
             bracketPairColorization: {
               enabled: true,
             },
@@ -123,8 +197,8 @@ export function CodeEditor({ code, onChange, language, onLanguageChange }: CodeE
               indentation: true,
             },
             scrollbar: {
-              vertical: 'visible',
-              horizontal: 'visible',
+              vertical: "visible",
+              horizontal: "visible",
               useShadows: false,
             },
             padding: {

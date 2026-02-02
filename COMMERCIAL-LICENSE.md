@@ -3,6 +3,7 @@ Commercial Licensing
 This project is available under a commercial license.
 
 If you wish to:
+
 - Sell this software
 - Bundle it with a paid product
 - Use it in SaaS or enterprise systems

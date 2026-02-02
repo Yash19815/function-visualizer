@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   ArrowRight,
   Circle,
@@ -6,8 +6,12 @@ import {
   Code2,
   Download,
   Network,
+  ChevronDown,
+  FileJson,
+  Image as ImageIcon,
 } from "lucide-react";
-import { CallGraph } from "./CallGraph";
+import { CallGraph, CallGraphRef } from "./CallGraph";
+import { FunctionLegend } from "./FunctionLegend";
 
 interface FunctionData {
   name: string;
@@ -57,6 +61,8 @@ export function FunctionVisualizer({
 }: FunctionVisualizerProps) {
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "graph">("list");
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const callGraphRef = useRef<CallGraphRef>(null);
 
   const getColorForFunction = (index: number) => {
     return functionColors[index % functionColors.length];
@@ -70,7 +76,7 @@ export function FunctionVisualizer({
     return calls.filter((call) => call.to === functionName);
   };
 
-  const handleExport = () => {
+  const handleExportJSON = () => {
     const data = {
       language,
       functions,
@@ -86,7 +92,39 @@ export function FunctionVisualizer({
     a.download = `code-analysis-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    setShowExportMenu(false);
   };
+
+  const handleExportImage = async () => {
+    if (callGraphRef.current && viewMode === "graph") {
+      await callGraphRef.current.exportAsJpeg();
+      setShowExportMenu(false);
+    }
+  };
+
+  const handleFunctionClick = (functionName: string) => {
+    if (callGraphRef.current && viewMode === "graph") {
+      callGraphRef.current.focusNode(functionName);
+    }
+  };
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showExportMenu && !target.closest(".export-dropdown-container")) {
+        setShowExportMenu(false);
+      }
+    };
+
+    if (showExportMenu) {
+      document.addEventListener("click", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [showExportMenu]);
 
   return (
     <div className="flex-1 flex flex-col bg-[#0d1117] overflow-hidden">
@@ -119,14 +157,41 @@ export function FunctionVisualizer({
               Graph
             </button>
           </div>
-          <button
-            onClick={handleExport}
-            disabled={functions.length === 0}
-            className="flex items-center gap-2 px-3 py-1.5 bg-[#238636] hover:bg-[#2ea043] disabled:bg-gray-800 disabled:text-gray-600 text-white rounded text-sm transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Export
-          </button>
+          <div className="relative export-dropdown-container">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              disabled={functions.length === 0}
+              className="flex items-center gap-2 px-3 py-1.5 bg-[#238636] hover:bg-[#2ea043] disabled:bg-gray-800 disabled:text-gray-600 text-white rounded text-sm transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Export
+              <ChevronDown className="w-3 h-3" />
+            </button>
+            {showExportMenu && functions.length > 0 && (
+              <div className="absolute right-0 mt-2 w-48 bg-[#0d1117] border border-gray-700 rounded-lg shadow-lg z-50">
+                <button
+                  onClick={handleExportJSON}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#161b22] transition-colors rounded-t-lg"
+                >
+                  <FileJson className="w-4 h-4" />
+                  Export as JSON
+                </button>
+                <button
+                  onClick={handleExportImage}
+                  disabled={viewMode !== "graph"}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#161b22] disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-b-lg"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  Export as JPEG
+                  {viewMode !== "graph" && (
+                    <span className="text-xs text-gray-500 ml-auto">
+                      (Graph view only)
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
           <div className="text-sm text-gray-400">
             {functions.length} function{functions.length !== 1 ? "s" : ""}
           </div>
@@ -146,12 +211,20 @@ export function FunctionVisualizer({
             </p>
           </div>
         ) : viewMode === "graph" ? (
-          <CallGraph
-            functions={functions}
-            calls={calls}
-            callSites={callSites}
-            getColorForFunction={getColorForFunction}
-          />
+          <div className="relative w-full h-full">
+            <FunctionLegend
+              functions={functions}
+              getColorForFunction={getColorForFunction}
+              onFunctionClick={handleFunctionClick}
+            />
+            <CallGraph
+              ref={callGraphRef}
+              functions={functions}
+              calls={calls}
+              callSites={callSites}
+              getColorForFunction={getColorForFunction}
+            />
+          </div>
         ) : (
           <div className="p-6 space-y-6">
             {/* Function List */}
