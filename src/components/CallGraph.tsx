@@ -53,9 +53,9 @@ export function CallGraph({
     const functionNodes: Node[] = functions.map((func, index) => {
       const color = getColorForFunction(index);
 
-      // Horizontal spacing for function definitions
-      const spacing = 250;
-      const x = index * spacing + 100;
+      // Horizontal spacing for function definitions - increased for better readability
+      const spacing = 400;
+      const x = index * spacing + 150;
       const y = 100; // Top layer
 
       return {
@@ -123,8 +123,8 @@ export function CallGraph({
           calleeIndex >= 0 ? getColorForFunction(calleeIndex) : "#6b7280";
 
         // Position call sites below their target function
-        const funcX = funcIndex * 250 + 100;
-        const offsetX = (siteIndex - sitesForThisFunction.length / 2) * 100;
+        const funcX = funcIndex * 400 + 150;
+        const offsetX = (siteIndex - sitesForThisFunction.length / 2) * 120;
         const x = funcX + offsetX;
         const y = 300; // Middle layer
 
@@ -248,7 +248,10 @@ export function CallGraph({
           showInteractive={false}
         />
         <MiniMap
-          className="bg-[#0d1117] border border-gray-700 rounded-lg shadow-lg"
+          className="!bg-[#0d1117] border border-gray-700 rounded-lg shadow-lg"
+          style={{
+            backgroundColor: "#0d1117",
+          }}
           nodeColor={(node: any) => {
             // Check if it's a call site node
             if (node.id.startsWith("call_")) {
