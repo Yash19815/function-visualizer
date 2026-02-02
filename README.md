@@ -131,4 +131,6 @@ Contributions are welcome! Feel free to open issues or submit pull requests.
 
 ## License
 
-This project is open source and available under the MIT License.
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International license.
+
+Commercial use is prohibited without a paid license. See COMMERCIAL-LICENSE.md for details.
