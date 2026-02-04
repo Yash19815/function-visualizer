@@ -11,7 +11,6 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { CallGraph, CallGraphRef } from "./CallGraph";
-import { FunctionLegend } from "./FunctionLegend";
 
 interface FunctionData {
   name: string;
@@ -102,12 +101,6 @@ export function FunctionVisualizer({
     }
   };
 
-  const handleFunctionClick = (functionName: string) => {
-    if (callGraphRef.current && viewMode === "graph") {
-      callGraphRef.current.focusNode(functionName);
-    }
-  };
-
   // Close export menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -131,7 +124,7 @@ export function FunctionVisualizer({
       <div className="bg-[#161b22] border-b border-gray-800 px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <GitBranch className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-300">Function Analysis</span>
+          <span className="text-sm text-gray-300">Function Graph</span>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-[#0d1117] rounded p-1">
@@ -168,7 +161,7 @@ export function FunctionVisualizer({
               <ChevronDown className="w-3 h-3" />
             </button>
             {showExportMenu && functions.length > 0 && (
-              <div className="absolute right-0 mt-2 w-48 bg-[#0d1117] border border-gray-700 rounded-lg shadow-lg z-50">
+              <div className="absolute right-0 mt-2 w-48 bg-[#0d1117] border border-gray-700 rounded-lg shadow-lg z-50 max-h-[200px] overflow-auto">
                 <button
                   onClick={handleExportJSON}
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#161b22] transition-colors rounded-t-lg"
@@ -211,12 +204,7 @@ export function FunctionVisualizer({
             </p>
           </div>
         ) : viewMode === "graph" ? (
-          <div className="relative w-full h-full">
-            <FunctionLegend
-              functions={functions}
-              getColorForFunction={getColorForFunction}
-              onFunctionClick={handleFunctionClick}
-            />
+          <div className="relative w-full h-full overflow-hidden">
             <CallGraph
               ref={callGraphRef}
               functions={functions}

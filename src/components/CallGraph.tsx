@@ -178,21 +178,22 @@ const CallGraphContent = forwardRef<CallGraphRef, CallGraphProps>(
 
       const functionNodes: Node[] = [];
       const callSiteNodes: Node[] = [];
-      const horizontalSpacing = 300;
+      const verticalSpacing = 200; // Spacing between functions vertically
+      const horizontalOffset = 400; // Distance between function and call site nodes
 
       functions.forEach((func, funcIndex) => {
         const color = getColorForFunction(funcIndex);
         const sitesForThisFunction = callSitesByCallee.get(func.name) || [];
 
-        // Calculate horizontal position
-        const baseX = funcIndex * horizontalSpacing + 150;
+        // Calculate vertical position for this function
+        const functionY = funcIndex * verticalSpacing + 100;
 
-        // Function always at the top
-        const functionY = 100;
+        // Function nodes on the left side
+        const functionX = 150;
 
-        // Call sites positioned below the function, spread vertically
-        const callSiteStartY = 300;
-        const callSiteVerticalSpacing = 200;
+        // Call sites positioned to the right of the function
+        const callSiteX = functionX + horizontalOffset;
+        const callSiteHorizontalSpacing = 120; // Spacing between call sites horizontally
 
         // Group call sites by line number to handle multiple calls on same line
         const callsByLine = new Map<number, CallSiteNode[]>();
@@ -203,10 +204,11 @@ const CallGraphContent = forwardRef<CallGraphRef, CallGraphProps>(
           callsByLine.get(callSite.lineNumber)!.push(callSite);
         });
 
-        // Create call site nodes (one per unique line)
+        // Create call site nodes (arranged horizontally)
         let nodeIndex = 0;
         callsByLine.forEach((callsOnLine, lineNumber) => {
-          const y = callSiteStartY + nodeIndex * callSiteVerticalSpacing;
+          const x = callSiteX + nodeIndex * callSiteHorizontalSpacing;
+          const y = functionY; // Align with function vertically
 
           // Get colors for all functions called on this line
           const colors = callsOnLine.map((cs) => {
@@ -262,7 +264,7 @@ const CallGraphContent = forwardRef<CallGraphRef, CallGraphProps>(
           callSiteNodes.push({
             id: nodeId,
             type: "default",
-            position: { x: baseX, y },
+            position: { x, y },
             data: {
               label: (
                 <div className="px-3 py-2 text-center">
@@ -285,8 +287,8 @@ const CallGraphContent = forwardRef<CallGraphRef, CallGraphProps>(
               maxWidth: colors.length > 1 ? "80px" : "65px",
               opacity: 0.95,
             },
-            sourcePosition: Position.Bottom,
-            targetPosition: Position.Top,
+            sourcePosition: Position.Right,
+            targetPosition: Position.Left,
           });
 
           nodeIndex++;
@@ -296,16 +298,18 @@ const CallGraphContent = forwardRef<CallGraphRef, CallGraphProps>(
         functionNodes.push({
           id: func.name,
           type: "default",
-          position: { x: baseX, y: functionY },
+          position: { x: functionX, y: functionY },
           data: {
             label: (
-              <div className="px-4 py-3">
-                <div className="flex items-center gap-2 mb-1">
+              <div className="px-4 py-3 text-center">
+                <div className="flex items-center justify-center gap-2 mb-1">
                   <div
                     className="w-2 h-2 rounded-full"
                     style={{ backgroundColor: color }}
                   />
-                  <div className="font-mono font-bold text-sm">{func.name}</div>
+                  <div className="font-mono font-bold text-sm whitespace-nowrap">
+                    {func.name}
+                  </div>
                 </div>
                 <div className="text-xs text-gray-400">
                   {func.type} • Line {func.lineNumber}
@@ -325,12 +329,13 @@ const CallGraphContent = forwardRef<CallGraphRef, CallGraphProps>(
             borderRadius: "12px",
             color: "#e6edf3",
             fontSize: "12px",
-            minWidth: "160px",
+            width: "auto",
+            maxWidth: "400px",
             boxShadow: `0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 1px ${color}20`,
             zIndex: 10, // Ensure function nodes are above call sites
           },
-          sourcePosition: Position.Bottom,
-          targetPosition: Position.Top,
+          sourcePosition: Position.Right,
+          targetPosition: Position.Left,
         });
       });
 
@@ -367,6 +372,7 @@ const CallGraphContent = forwardRef<CallGraphRef, CallGraphProps>(
               stroke: color,
               strokeWidth: 2.5,
               opacity: 0.8,
+              strokeDasharray: "5,5", // Dashed line pattern
             },
             markerEnd: {
               type: MarkerType.ArrowClosed,
@@ -429,12 +435,14 @@ const CallGraphContent = forwardRef<CallGraphRef, CallGraphProps>(
             showInteractive={false}
           />
           <MiniMap
-            position="bottom-left"
+            position="bottom-right"
             pannable={true}
             zoomable={true}
             className="!bg-[#0d1117] border border-gray-700 rounded-lg shadow-lg"
             style={{
-              backgroundColor: "#0d1117",
+              backgroundColor: "#2a374aff",
+              width: 120,
+              height: 120,
             }}
             nodeColor={(node: any) => {
               // Check if it's a call site node
