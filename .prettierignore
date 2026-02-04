@@ -1,2 +1,11 @@
 node_modules/
 build/
+dist/
+coverage/
+*.log
+*.lock
+package-lock.json
+.vite/
+.DS_Store
+public/
+vite.config.ts
