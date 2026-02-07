@@ -9,7 +9,7 @@ pnpm-debug.log*
 Build
 Build-ssr
 *.local
-
+dist
 # Environment variables
 .env
 .env.local
