@@ -2,11 +2,11 @@
   "name": "function-visualizer-vscode",
   "displayName": "Function Visualizer",
   "description": "Visualize function calls and code structure in an interactive graph",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "YashGedia",
   "icon": "extension/resources/icon.png",
   "engines": {
-    "vscode": "^1.108.0"
+    "vscode": "^1.107.0"
   },
   "categories": [
     "Visualization",
@@ -23,10 +23,30 @@
     "python",
     "java"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:function-visualizer.debug",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescriptreact",
+    "onLanguage:python",
+    "onLanguage:java",
+    "onLanguage:c",
+    "onLanguage:cpp",
+    "onLanguage:r",
+    "onLanguage:go",
+    "onLanguage:rust",
+    "onLanguage:ruby",
+    "onLanguage:php",
+    "onLanguage:swift"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
+      {
+        "command": "function-visualizer.debug",
+        "title": "Visualize: Debug Activation"
+      },
       {
         "command": "function-visualizer.visualizeFile",
         "title": "Visualize: Show Function Graph",
@@ -40,24 +60,28 @@
     "menus": {
       "editor/context": [
         {
+          "command": "function-visualizer.debug",
+          "group": "navigation"
+        },
+        {
           "command": "function-visualizer.visualizeFile",
           "group": "navigation",
-          "when": "editorLangId == javascript || editorLangId == typescript || editorLangId == python || editorLangId == java || editorLangId == javascriptreact || editorLangId == typescriptreact"
+          "when": "editorLangId =~ /^(javascript|typescript|python|java|javascriptreact|typescriptreact|c|cpp|r|go|rust|ruby|php|swift)$/"
         },
         {
           "command": "function-visualizer.visualizeSelection",
           "group": "navigation",
-          "when": "editorHasSelection && (editorLangId == javascript || editorLangId == typescript || editorLangId == python || editorLangId == java || editorLangId == javascriptreact || editorLangId == typescriptreact)"
+          "when": "editorHasSelection && editorLangId =~ /^(javascript|typescript|python|java|javascriptreact|typescriptreact|c|cpp|r|go|rust|ruby|php|swift)$/"
         }
       ],
       "commandPalette": [
         {
           "command": "function-visualizer.visualizeFile",
-          "when": "editorLangId == javascript || editorLangId == typescript || editorLangId == python || editorLangId == java || editorLangId == javascriptreact || editorLangId == typescriptreact"
+          "when": "editorLangId =~ /^(javascript|typescript|python|java|javascriptreact|typescriptreact|c|cpp|r|go|rust|ruby|php|swift)$/"
         },
         {
           "command": "function-visualizer.visualizeSelection",
-          "when": "editorHasSelection && (editorLangId == javascript || editorLangId == typescript || editorLangId == python || editorLangId == java || editorLangId == javascriptreact || editorLangId == typescriptreact)"
+          "when": "editorHasSelection && editorLangId =~ /^(javascript|typescript|python|java|javascriptreact|typescriptreact|c|cpp|r|go|rust|ruby|php|swift)$/"
         }
       ]
     },
@@ -128,7 +152,7 @@
     "@types/node": "^20.10.0",
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
-    "@types/vscode": "^1.108.1",
+    "@types/vscode": "^1.107.0",
     "@vitejs/plugin-react-swc": "^3.10.2",
     "@vscode/vsce": "^3.7.1",
     "autoprefixer": "^10.4.24",
@@ -154,6 +178,6 @@
     "build": "npm run build:webapp && npm run build:extension",
     "preview": "cd webapp && vite preview",
     "format": "prettier --write .",
-    "package": "vsce package"
+    "package": "vsce package --out packages/"
   }
 }

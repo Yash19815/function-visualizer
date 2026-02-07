@@ -34,3 +34,8 @@ coverage
 # Logs
 logs
 *.log
+.agent
+*.vsix
+test_samples/
+scripts/
+tsconfig.script.json

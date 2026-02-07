@@ -8,6 +8,14 @@ import { VisualizerPanel } from "./VisualizerPanel";
 export function activate(context: vscode.ExtensionContext) {
   console.log("Function Visualizer extension is now active");
 
+  // Register debug command
+  const debugCommand = vscode.commands.registerCommand(
+    "function-visualizer.debug",
+    () => {
+      vscode.window.showInformationMessage("Function Visualizer is active!");
+    },
+  );
+
   // Register command to visualize the entire active file
   const visualizeFileCommand = vscode.commands.registerCommand(
     "function-visualizer.visualizeFile",
@@ -26,12 +34,20 @@ export function activate(context: vscode.ExtensionContext) {
         "typescript",
         "python",
         "java",
+        "c",
+        "cpp",
+        "r",
+        "go",
+        "rust",
+        "ruby",
+        "php",
+        "swift",
         "javascriptreact",
         "typescriptreact",
       ];
       if (!supportedLanguages.includes(editor.document.languageId)) {
         vscode.window.showWarningMessage(
-          `Language "${editor.document.languageId}" is not currently supported. Supported languages: JavaScript, TypeScript, Python, Java.`,
+          `Language "${editor.document.languageId}" is not currently supported. Supported languages: JS, TS, Python, Java, C/C++, R, Go, Rust, Ruby, PHP, Swift.`,
         );
         return;
       }
@@ -68,7 +84,11 @@ export function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  context.subscriptions.push(visualizeFileCommand, visualizeSelectionCommand);
+  context.subscriptions.push(
+    visualizeFileCommand,
+    visualizeSelectionCommand,
+    debugCommand,
+  );
 }
 
 /**

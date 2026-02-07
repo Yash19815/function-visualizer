@@ -488,12 +488,13 @@ function parseC(code: string, lines: string[]): ParsedCode {
     .replace(/\/\*[\s\S]*?\*\//g, "") // Multi-line comments
     .replace(/\/\/.*/g, ""); // Single-line comments
 
-  // Function definitions: returnType functionName(params)
-  const funcRegex =
-    /\b(?:void|int|char|float|double|long|short|unsigned|signed|struct\s+\w+|\w+)\s+(\w+)\s*\(([^)]*)\)\s*{/g;
+  // Function definitions: returnType[*] functionName(params)
+  // Supports: int* func(), Node* func(), unsigned int func(), etc.
+  // We use a broader regex for return type to capture pointers and modifiers
+  const funcRegex = /((?:(?:\w+(?:\s*\*)*)\s+)+)(\w+)\s*\(([^)]*)\)\s*{/g;
   let match: RegExpExecArray | null;
   while ((match = funcRegex.exec(codeWithoutComments)) !== null) {
-    const name = match[1];
+    const name = match[2];
     // Skip keywords
     if (["if", "while", "for", "switch", "return"].includes(name)) continue;
 
@@ -503,7 +504,7 @@ function parseC(code: string, lines: string[]): ParsedCode {
     functions.push({
       name,
       lineNumber,
-      params: match[2]
+      params: match[3]
         .split(",")
         .map((p) => p.trim().split(/\s+/).pop() || "")
         .filter(Boolean),
@@ -511,8 +512,8 @@ function parseC(code: string, lines: string[]): ParsedCode {
     });
   }
 
-  // Struct definitions
-  const structRegex = /struct\s+(\w+)/g;
+  // Struct definitions: struct Name {
+  const structRegex = /struct\s+(\w+)\s*\{/g;
   let structMatch: RegExpExecArray | null;
   while ((structMatch = structRegex.exec(codeWithoutComments)) !== null) {
     const lineNumber = codeWithoutComments
@@ -533,6 +534,9 @@ function parseC(code: string, lines: string[]): ParsedCode {
     }
   }
 
+  // Sort functions by line number to ensure correct scope detection
+  functions.sort((a, b) => a.lineNumber - b.lineNumber);
+
   // Find function calls
   const functionNames = functions.map((f) => f.name);
   let callSiteCounter = 0;
@@ -552,11 +556,14 @@ function parseC(code: string, lines: string[]): ParsedCode {
     functionNames.forEach((fnName) => {
       const callRegex = new RegExp(`\\b${fnName}\\s*\\(`, "g");
       if (callRegex.test(line)) {
-        // Skip function definitions
+        // Skip function definitions: type name(...) {
+        // We check if it ends with { and doesn't have = (to allow int x = func())
+        // BUT we must allow control flow: if (...), while (...), for (...)
         if (
-          /\b(?:void|int|char|float|double|long|short|unsigned|signed|struct)\s+/.test(
-            trimmedLine,
-          )
+          trimmedLine.includes("{") &&
+          !trimmedLine.includes("=") &&
+          !trimmedLine.includes("return") &&
+          !/^(?:if|while|for|switch|catch)\b/.test(trimmedLine)
         ) {
           return;
         }
@@ -676,14 +683,17 @@ function parseCpp(code: string, lines: string[]): ParsedCode {
     }
 
     functionNames.forEach((fnName) => {
-      const callRegex = new RegExp(`\\b${fnName}\\s*\\(`, "g");
+      const callRegex = new RegExp(`(?:\\.|->|::|\\b)${fnName}\\s*\\(`, "g");
       if (callRegex.test(line)) {
         if (
-          /\b(?:void|int|char|float|double|bool|class|namespace)\s+/.test(
-            trimmedLine,
-          ) ||
+          /\b(?:class|namespace|struct)\s+/.test(trimmedLine) ||
           trimmedLine.startsWith("class ") ||
-          trimmedLine.startsWith("namespace ")
+          trimmedLine.startsWith("namespace ") ||
+          // Check if it's a function definition: returnType name(...) {
+          (trimmedLine.includes("{") &&
+            !trimmedLine.includes("=") &&
+            !trimmedLine.includes("return") &&
+            !/^(?:if|while|for|switch|catch)\b/.test(trimmedLine))
         ) {
           return;
         }
