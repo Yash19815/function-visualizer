@@ -4,6 +4,12 @@ All notable changes to the "Function Visualizer" extension will be documented in
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.1.2] - 2026-02-23
+
+### Changed
+
+- Rewrote `README.md` to focus on end-user usage (installation, commands, graph guide, supported languages).
+
 ## [0.1.1] - 2026-02-07
 
 ### Fixed
@@ -11,7 +17,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Downgraded minimum VS Code engine requirement to `^1.107.0` to support slightly older editor versions.
 - Added explicit debug command `function-visualizer.debug`.
 - Fixed multi-language support (Java, C, C++, Python, etc.) by correctly registering activation events.
-- **Critical Fix**: Improved C/C++ parser to correctly handle pointer return types, struct definitions, and function calls within control flow statements.ly implemented but disabled in extension logic).
+- **Critical Fix**: Improved C/C++ parser to correctly handle pointer return types, struct definitions, and function calls within control flow statements.
 
 ## [0.1.0] - 2026-02-06
 

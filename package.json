@@ -2,7 +2,7 @@
   "name": "function-visualizer-vscode",
   "displayName": "Function Visualizer",
   "description": "Visualize function calls and code structure in an interactive graph",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "YashGedia",
   "icon": "extension/resources/icon.png",
   "engines": {
